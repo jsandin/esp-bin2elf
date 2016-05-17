@@ -6,7 +6,7 @@
 # http://richard.burtons.org/2015/05/17/esp8266-boot-process/
 
 from esp_rom import EspRom
-from esp_elf import XtensaElf, EspElfSection
+from esp_elf import XtensaElf, EspElfSection, default_section_settings
 
 addr_to_section_name_mapping = {}
 
@@ -18,8 +18,13 @@ def parse_rom(rom_name, rom_filename):
 
 
 def name_sections(rom):
+    print "select a unique name for each section in the rom."
+    print "sensible defaults are available for the following common names:"
+    print " ".join(default_section_settings.keys())
+    print "if defaults are unavailable for a name, generic values will be used."
+
     for section in rom.sections:
-        name = raw_input("enter unique name for 0x%04x>" % (section.address))
+        name = raw_input("enter a name for 0x%04x> " % (section.address))
         addr_to_section_name_mapping[section.address] = name
 
 
