@@ -16,12 +16,12 @@ class EspRom(object):
 	    self.sections.append(section)
 
     def __str__(self):
-        repr = "EspRom("
-        repr += "header: %s, " % (self.header)
-        repr += "len(sections): %s, " % (len(self.sections))
-        repr += "len(contents): %s)" % (len(self.contents))
+        rep = "EspRom("
+        rep += "header: %s, " % (self.header)
+        rep += "len(sections): %s, " % (len(self.sections))
+        rep += "len(contents): %s)" % (len(self.contents))
    
-        return repr
+        return rep
 
  
 class EspRomHeader(object):
@@ -53,14 +53,14 @@ class EspRomHeader(object):
         self.entry_addr = unpack('<I', rom_header_bytes[4:8])[0]
     
     def __str__(self):
-        repr = "EspRomHeader("
-        repr += "magic: %02x, " % (self.magic)
-        repr += "sect_count: %d, " % (self.sect_count)
-        repr += "flags1: %02x, " % (self.flags1)
-        repr += "flags2: %02x, " % (self.flags2)
-        repr += "entry_addr: %04x)" % (self.entry_addr)
+        rep = "EspRomHeader("
+        rep += "magic: %02x, " % (self.magic)
+        rep += "sect_count: %d, " % (self.sect_count)
+        rep += "flags1: %02x, " % (self.flags1)
+        rep += "flags2: %02x, " % (self.flags2)
+        rep += "entry_addr: %04x)" % (self.entry_addr)
     
-        return repr
+        return rep
     
 
 class EspRomSection(object):
@@ -89,11 +89,11 @@ class EspRomSection(object):
 		    % (len(self.contents), self.length))
     
     def __str__(self):
-        repr = "EspRomSection("
-        repr += "address: %04x, " % (self.address)
-        repr += "length: %d)" % (self.length)
+        rep = "EspRomSection("
+        rep += "address: %04x, " % (self.address)
+        rep += "length: %d)" % (self.length)
    
-        return repr
+        return rep
 
 
 class RomParseException(object):
