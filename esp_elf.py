@@ -40,13 +40,12 @@ class XtensaElf(object):
 
     def generate_string_table(self):
         shstrtab_contents = ''
-        nameoffset = 0
 
+        # its not obvious, but the null section is first in the
+        # headers list,and gets a nameoffset of 0 as a result here.
         for section in self.elf.sectionHeaders:
-	    section.nameoffset = nameoffset
-            shstrtab_contents += '\x00' + section.name
-	    nameoffset = len(shstrtab_contents)
-        shstrtab_contents += '\x00'
+            section.nameoffset = len(shstrtab_contents)
+            shstrtab_contents += (section.name + '\00')
 
         string_table = EspElfSection('.shstrtab', 0x0, shstrtab_contents)
         self.add_section(string_table)
@@ -73,11 +72,11 @@ class EspElfSection(object):
         header.content = section_bytes
         header.section_size = len(section_bytes)
 
-	if section_name in default_section_settings:
-	    default_settings = default_section_settings[section_name]
-	    header.type = default_settings.type
-	    header.addralign = default_settings.addralign
-	    header.flags = default_settings.flags
+        if section_name in default_section_settings:
+            default_settings = default_section_settings[section_name]
+            header.type = default_settings.type
+            header.addralign = default_settings.addralign
+            header.flags = default_settings.flags
 
         else:
             pass
