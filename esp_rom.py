@@ -2,6 +2,7 @@
 #
 # MIT licence
 
+from esp_memory_map import find_region_for_address
 from struct import unpack
 
 class EspRom(object):
@@ -115,5 +116,17 @@ def pretty_print_rom(esp_rom):
  
     print "sections:"
     for section in esp_rom.sections:
-        print "\taddress: 0x%04x" % (section.address)
-        print "\tlength: %d\n" % (section.length)
+        pretty_print_esp_section(section)
+
+
+def pretty_print_esp_section(section):
+    (low_region, high_region) = find_region_for_address(section.address)
+
+    if low_region:
+        desc = low_region.description
+        low_addr, high_addr = low_region.base_address, high_region.base_address 
+        mem_desc = "%s (0x%04x - 0x%04x)" % (desc, low_addr, high_addr)
+        print "\taddress: 0x%04x, part of %s" % (section.address, mem_desc)
+    else:
+        print "\taddress: 0x%04x, unknown memory region" % (section.address)
+    print "\tlength: %d\n" % (section.length)
