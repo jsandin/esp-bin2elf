@@ -42,7 +42,7 @@ class XtensaElf(object):
         shstrtab_contents = ''
 
         # its not obvious, but the null section is first in the
-        # headers list,and gets a nameoffset of 0 as a result here.
+        # headers list, and gets a nameoffset of 0 as a result here.
         for section in self.elf.sectionHeaders:
             section.nameoffset = len(shstrtab_contents)
             shstrtab_contents += (section.name + '\00')
@@ -80,7 +80,7 @@ class EspElfSection(object):
 
         else:
             pass
-	    # generate settings based on address range
+            # generate settings based on address range
 
         self.header = header
 

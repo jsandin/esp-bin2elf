@@ -6,14 +6,14 @@ from struct import unpack
 
 class EspRom(object):
     def __init__(self, rom_bytes_stream):
-	self.contents = rom_bytes_stream.read()
-	rom_bytes_stream.seek(0)
+        self.contents = rom_bytes_stream.read()
+        rom_bytes_stream.seek(0)
         self.header = EspRomHeader(rom_bytes_stream.read(EspRomHeader.ROM_HEADER_SIZE))
 
         self.sections = []
-	for i in range(0, self.header.sect_count):
+        for i in range(0, self.header.sect_count):
             section = EspRomSection(rom_bytes_stream)
-	    self.sections.append(section)
+            self.sections.append(section)
 
     def __str__(self):
         rep = "EspRom("
@@ -38,15 +38,15 @@ class EspRomHeader(object):
 
         if len(rom_header_bytes) != EspRomHeader.ROM_HEADER_SIZE:
             raise RomParseException(
-		"EspRomRomHeader.init(): len(rom_header_bytes) is %d bytes != 8 bytes."
-	            % (len(rom_header_bytes)))
+                "EspRomRomHeader.init(): len(rom_header_bytes) is %d bytes != 8 bytes."
+                    % (len(rom_header_bytes)))
     
         if rom_header_bytes[0] != '\xe9':
             raise RomParseException(
-		"EspRomRomHeader.init(): magic_number is %s != 0xe9."
-		    % (rom_header_bytes[0]))
+                "EspRomRomHeader.init(): magic_number is %s != 0xe9."
+                    % (rom_header_bytes[0]))
 
-	self.magic = unpack('<B', rom_header_bytes[0])[0]
+        self.magic = unpack('<B', rom_header_bytes[0])[0]
         self.sect_count = unpack('<B', rom_header_bytes[1])[0]
         self.flags1 = unpack('<B', rom_header_bytes[2])[0]
         self.flags2 = unpack('<B', rom_header_bytes[3])[0]
@@ -72,21 +72,21 @@ class EspRomSection(object):
         #     uint32 length;
         # } sect_header;
 
-	section_header_bytes = rom_bytes_stream.read(EspRomSection.SECTION_HEADER_SIZE)
+        section_header_bytes = rom_bytes_stream.read(EspRomSection.SECTION_HEADER_SIZE)
     
         if len(section_header_bytes) != EspRomSection.SECTION_HEADER_SIZE:
             raise RomParseException(
-		"EspRomSection.init(): section_header_bytes is %d bytes != 8 bytes."
-		    % (len(section_header_bytes)))
+                "EspRomSection.init(): section_header_bytes is %d bytes != 8 bytes."
+                    % (len(section_header_bytes)))
     
         self.address = unpack('<I', section_header_bytes[0:4])[0]
         self.length = unpack('<I', section_header_bytes[4:8])[0]
-	self.contents = rom_bytes_stream.read(self.length)
+        self.contents = rom_bytes_stream.read(self.length)
 
         if len(self.contents) != self.length:
             raise RomParseException(
-		"EspRomSection.init(): self.contents is %d bytes != self.length %d."
-		    % (len(self.contents), self.length))
+                "EspRomSection.init(): self.contents is %d bytes != self.length %d."
+                    % (len(self.contents), self.length))
     
     def __str__(self):
         rep = "EspRomSection("

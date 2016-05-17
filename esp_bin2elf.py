@@ -14,19 +14,19 @@ def prompt_for_section_name():
 def convert_rom_to_elf(rom_filename):
     with open(rom_filename) as f:
         rom = EspRom(f)
-	elf = XtensaElf(rom_filename + '.elf', rom.header.entry_addr)
+        elf = XtensaElf(rom_filename + '.elf', rom.header.entry_addr)
 
-	null_section = EspElfSection('', 0x0, '')
-	elf.add_section(null_section)
+        null_section = EspElfSection('', 0x0, '')
+        elf.add_section(null_section)
 
         flash_section = EspElfSection('.irom0.text', 0x40200000, rom.contents)
-	elf.add_section(flash_section)
+        elf.add_section(flash_section)
 
         for section in rom.sections:
             print section, section.contents
             section_name = prompt_for_section_name()
             elf_section = EspElfSection(section_name, section.address, section.contents)
-	    elf.add_section(elf_section)
+            elf.add_section(elf_section)
 
         #elf.add_symtab()
         elf.generate_string_table()

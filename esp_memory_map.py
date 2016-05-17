@@ -9,14 +9,14 @@ class EspMemoryRegion(object):
         self.description = description
 
     def __str__(self):
-	rep = "EspMemoryRegion("
-	rep += "base_address: 0x%08x, " % (self.base_address)
-	rep += "size: 0x%x, " % (self.size)
-	rep += "permissions: %s, " % (self.permissions)
-	rep += "min_access_width: %d, " % (self.min_access_width)
-	rep += "description: %s)" % (self.description)
+        rep = "EspMemoryRegion("
+        rep += "base_address: 0x%08x, " % (self.base_address)
+        rep += "size: 0x%x, " % (self.size)
+        rep += "permissions: %s, " % (self.permissions)
+        rep += "min_access_width: %d, " % (self.min_access_width)
+        rep += "description: %s)" % (self.description)
 
-	return rep
+        return rep
 
 
 memory_regions = [
