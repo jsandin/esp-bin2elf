@@ -41,15 +41,15 @@ class XtensaElf(object):
     def generate_string_table(self):
         shstrtab_contents = ''
 
+        string_table = EspElfSection('.shstrtab', 0x0, shstrtab_contents)
+        self.add_section(string_table)
+        self.elf.fileHeader.shstrndx = len(self.elf.sectionHeaders) - 1
+
         # its not obvious, but the null section is first in the
         # headers list, and gets a nameoffset of 0 as a result here.
         for section in self.elf.sectionHeaders:
             section.nameoffset = len(shstrtab_contents)
             shstrtab_contents += (section.name + '\00')
-
-        string_table = EspElfSection('.shstrtab', 0x0, shstrtab_contents)
-        self.add_section(string_table)
-        self.elf.fileHeader.shstrndx = len(self.elf.sectionHeaders) - 1
 
     def add_section(self, esp_section):
         self.elf.sectionHeaders.append(esp_section.header)
@@ -73,14 +73,17 @@ class EspElfSection(object):
         header.section_size = len(section_bytes)
 
         if section_name in default_section_settings:
-            default_settings = default_section_settings[section_name]
-            header.type = default_settings.type
-            header.addralign = default_settings.addralign
-            header.flags = default_settings.flags
-
+            settings_to_use = default_section_settings[section_name]
+        elif is_code(section_address):
+            settings_to_use = codeSettings
+        elif is_data(section_address):
+            settings_to_use = dataSettings
         else:
-            pass
-            # generate settings based on address range
+            raise Exception("can't find settings for %x" % (section_adddress))
+
+        header.type = settings_to_use.type
+        header.addralign = settings_to_use.addralign
+        header.flags = settings_to_use.flags
 
         self.header = header
 
@@ -91,11 +94,15 @@ class SectionSettings(object):
         self.addralign = addralign
         self.flags = flags
 
+
 # section_types:
 SHT_NULL=0
 SHT_PROGBITS=1
 SHT_STRTAB=3
 SHT_NOBITS=8
+
+codeSettings = SectionSettings(type=SHT_PROGBITS, addralign=4, flags=0x6)
+dataSettings = SectionSettings(type=SHT_PROGBITS, addralign=16, flags=0x3)
 
 default_section_settings = {
   '':            SectionSettings(type=SHT_NULL,     addralign= 0, flags=0x0),

@@ -32,11 +32,11 @@ memory_regions = [
     EspMemoryRegion(0x3FFC0000, 0x20000,     'r',  8, "unknown region 1"),
     EspMemoryRegion(0x3FFE0000, 0x8000,      'r',  8, "unmapped? (reads 0x00000000)"),
     EspMemoryRegion(0x3FFE8000, 0x18000,    'rw',  8, "data RAM"),
-    EspMemoryRegion(0x40000000, 0x10000,     'r', 32, "boot ROM"),
-    EspMemoryRegion(0x40010000, 0x10000,     'r', 32, "boot ROM (repeated)"),
+    EspMemoryRegion(0x40000000, 0x10000,    'rx', 32, "boot ROM"),
+    EspMemoryRegion(0x40010000, 0x10000,    'rx', 32, "boot ROM (repeated)"),
     EspMemoryRegion(0x40020000, 0xD0000,     'r', 32, "unmapped? (reads 0x00000000)"),
-    EspMemoryRegion(0x40100000, 0x8000,     'rw', 32, "instruction RAM"),
-    EspMemoryRegion(0x40108000, 0x8000,     'rw', 32, "mappable instruction RAM"),
+    EspMemoryRegion(0x40100000, 0x8000,    'rwx', 32, "instruction RAM"),
+    EspMemoryRegion(0x40108000, 0x8000,    'rwx', 32, "mappable instruction RAM"),
     EspMemoryRegion(0x40110000, 0x30000,     'r', 32, "unmapped? (reads 0x00000000)"),
     EspMemoryRegion(0x40140000, 0xC0000,     'r', 32, "unmapped? (reads 0x5931d8ec)"),
     EspMemoryRegion(0x40200000, 0x100000,    'r', 32, "spi flash cache"),
@@ -47,7 +47,19 @@ memory_regions = [
 
 def find_region_for_address(address):
     for i in range(len(memory_regions)-1):
-        low, high= memory_regions[i], memory_regions[i+1]
+        low, high = memory_regions[i], memory_regions[i+1]
         if address >= low.base_address and address < high.base_address:
             return low, high
     return None, None
+
+def is_code(address):
+    low, high = find_region_for_address(address)
+    if low and 'x' in low.permissions:
+        return True
+    return False
+
+def is_data(address):
+    low, high = find_region_for_address(address)
+    if low and low.base_address == 0x3FFE8000:
+        return True
+    return False
