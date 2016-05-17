@@ -5,7 +5,8 @@
 from struct import unpack
 
 class EspRom(object):
-    def __init__(self, rom_bytes_stream):
+    def __init__(self, rom_name, rom_bytes_stream):
+        self.name = rom_name
         self.contents = rom_bytes_stream.read()
         rom_bytes_stream.seek(0)
         self.header = EspRomHeader(rom_bytes_stream.read(EspRomHeader.ROM_HEADER_SIZE))
@@ -17,6 +18,7 @@ class EspRom(object):
 
     def __str__(self):
         rep = "EspRom("
+        rep += "name: %s, " % (self.name)
         rep += "header: %s, " % (self.header)
         rep += "len(sections): %s, " % (len(self.sections))
         rep += "len(contents): %s)" % (len(self.contents))
@@ -54,11 +56,11 @@ class EspRomHeader(object):
     
     def __str__(self):
         rep = "EspRomHeader("
-        rep += "magic: %02x, " % (self.magic)
+        rep += "magic: 0x%02x, " % (self.magic)
         rep += "sect_count: %d, " % (self.sect_count)
-        rep += "flags1: %02x, " % (self.flags1)
-        rep += "flags2: %02x, " % (self.flags2)
-        rep += "entry_addr: %04x)" % (self.entry_addr)
+        rep += "flags1: 0x%02x, " % (self.flags1)
+        rep += "flags2: 0x%02x, " % (self.flags2)
+        rep += "entry_addr: 0x%04x)" % (self.entry_addr)
     
         return rep
     
@@ -90,7 +92,7 @@ class EspRomSection(object):
     
     def __str__(self):
         rep = "EspRomSection("
-        rep += "address: %04x, " % (self.address)
+        rep += "address: 0x%04x, " % (self.address)
         rep += "length: %d)" % (self.length)
    
         return rep
@@ -98,3 +100,20 @@ class EspRomSection(object):
 
 class RomParseException(object):
     pass
+
+
+def pretty_print_rom(esp_rom):
+    print "EspRom:"
+    print "\tname: %s\n" % (esp_rom.name)
+
+    print "header:"
+    print "\tmagic: 0x%02x" % (esp_rom.header.magic)
+    print "\tsect_count: %d" % (esp_rom.header.sect_count)
+    print "\tflags1: 0x%02x" % (esp_rom.header.flags1)
+    print "\tflags2: 0x%02x" % (esp_rom.header.flags2)
+    print "\tentry_addr: 0x%04x\n" % (esp_rom.header.entry_addr)
+ 
+    print "sections:"
+    for section in esp_rom.sections:
+        print "\taddress: 0x%04x" % (section.address)
+        print "\tlength: %d\n" % (section.length)
