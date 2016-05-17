@@ -75,7 +75,7 @@ class EspElfSection(object):
 
 	if section_name in default_section_settings:
 	    default_settings = default_section_settings[section_name]
-	    header.type = default_settings.section_type
+	    header.type = default_settings.type
 	    header.addralign = default_settings.addralign
 	    header.flags = default_settings.flags
 
@@ -86,19 +86,24 @@ class EspElfSection(object):
         self.header = header
 
 
-class EspElfSectionSettings(object):   
-    def __init__(self, section_type, addralign, flags):
-        self.section_type = section_type
+class SectionSettings(object):
+    def __init__(self, type, addralign, flags):
+        self.type = type
         self.addralign = addralign
         self.flags = flags
 
+# section_types:
+SHT_NULL=0
+SHT_PROGBITS=1
+SHT_STRTAB=3
+SHT_NOBITS=8
 
 default_section_settings = {
-    '':            EspElfSectionSettings(section_type=0, addralign=0,  flags=0x0),
-    '.data':       EspElfSectionSettings(section_type=1, addralign=16, flags=0x3),
-    '.rodata':     EspElfSectionSettings(section_type=1, addralign=16, flags=0x2),
-    '.bss':        EspElfSectionSettings(section_type=8, addralign=16, flags=0x3),
-    '.text':       EspElfSectionSettings(section_type=1, addralign=4,  flags=0x6),
-    '.irom0.text': EspElfSectionSettings(section_type=1, addralign=4,  flags=0x6),
-    '.shstrtab':   EspElfSectionSettings(section_type=3, addralign=1,  flags=0x0)
+  '':            SectionSettings(type=SHT_NULL,     addralign= 0, flags=0x0),
+  '.data':       SectionSettings(type=SHT_PROGBITS, addralign=16, flags=0x3),
+  '.rodata':     SectionSettings(type=SHT_PROGBITS, addralign=16, flags=0x2),
+  '.bss':        SectionSettings(type=SHT_NOBITS,   addralign=16, flags=0x3),
+  '.text':       SectionSettings(type=SHT_PROGBITS, addralign= 4, flags=0x6),
+  '.irom0.text': SectionSettings(type=SHT_PROGBITS, addralign=16, flags=0x6),
+  '.shstrtab':   SectionSettings(type=SHT_STRTAB,   addralign= 1, flags=0x0)
 }
