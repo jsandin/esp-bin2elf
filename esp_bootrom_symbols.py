@@ -2,7 +2,7 @@
 #
 # MIT licence
 
-# symbols are listed here:
+# boomrom symbols are listed here:
 # https://github.com/espressif/ESP8266_RTOS_SDK/blob/master/ld/eagle.rom.addr.v6.ld
 
 symbols = {
