@@ -1,3 +1,7 @@
+# esp-bin2elf written by Joel Sandin <jsandin@gmail.com>
+#
+# MIT licence
+
 # data here from: http://esp8266-re.foogod.com/wiki/Memory_Map
 
 class EspMemoryRegion(object):

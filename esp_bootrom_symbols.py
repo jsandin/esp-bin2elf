@@ -1,3 +1,7 @@
+# esp-bin2elf written by Joel Sandin <jsandin@gmail.com>
+#
+# MIT licence
+
 # symbols are listed here:
 # https://github.com/espressif/ESP8266_RTOS_SDK/blob/master/ld/eagle.rom.addr.v6.ld
 
@@ -11,14 +15,14 @@ symbols = {
     'Wait_SPI_Idle':      0x4000448c,
     'Enable_QMode':       0x400044c0,
     'Disable_QMode':      0x40004508,
-#
+
     'Cache_Read_Enable':  0x40004678,
     'Cache_Read_Disable': 0x400047f0,
-#
+
     'lldesc_build_chain': 0x40004f40,
     'lldesc_num2link':    0x40005050,
     'lldesc_set_owner':   0x4000507c,
-#
+
     '__adddf3':           0x4000c538,
     '__addsf3':           0x4000c180,
     '__divdf3':           0x4000cb94,
@@ -43,13 +47,13 @@ symbols = {
     '__umoddi3':          0x4000d770,
     '__umodsi3':          0x4000e268,
     '__umulsidi3':        0x4000dcf0,
-#
+
     'bzero':              0x40002ae8,
     'memcmp':             0x400018d4,
     'memcpy':             0x400018b4,
     'memmove':            0x400018c4,
     'memset':             0x400018a4,
-#
+
     'strcmp':             0x40002aa8,
     'strcpy':             0x40002a88,
     'strlen':             0x40002ac8,
