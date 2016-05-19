@@ -7,6 +7,7 @@
 
 from esp_rom import EspRom
 from esp_elf import XtensaElf, EspElfSection, default_section_settings
+from esp_bootrom import get_bootrom_contents
 
 addr_to_section_name_mapping = {}
 
@@ -33,6 +34,10 @@ def convert_rom_to_elf(esp_rom, filename_to_write):
 
     flash_section = EspElfSection('.irom0.text', 0x40200000, esp_rom.contents)
     elf.add_section(flash_section)
+
+    bootrom_bytes = get_bootrom_contents()
+    bootrom_section = EspElfSection('.bootrom.text', 0x40000000, bootrom_bytes)
+    elf.add_section(bootrom_section)
 
     for section in esp_rom.sections:
         if section.address not in addr_to_section_name_mapping:
