@@ -47,6 +47,11 @@ class XtensaElf(object):
 
     def generate_elf(self):
         # layout = elfheader | section contents | sheaders | pheaders
+        #
+        # _beware_! elffile doesn't write program headers, and will mess with
+        # offsets when calling pack() if the order isn't exactly as in this
+        # function
+
         self._generate_null_section_and_string_table()
 
         offset = self.elf.fileHeader.ehsize
@@ -63,18 +68,18 @@ class XtensaElf(object):
 
             offset += section.header.section_size
 
-        self.elf.phoff = offset
-        offset += self.elf.fileHeader.phentsize * self.elf.fileHeader.phnum
-
         self.elf.shoff = offset
         offset += self.elf.fileHeader.shentsize  * self.elf.fileHeader.shnum
+
+        self.elf.phoff = offset
+        offset += self.elf.fileHeader.phentsize * self.elf.fileHeader.phnum
 
     def _generate_null_section_and_string_table(self):
         null_section = EspElfSection('', 0x0, '')
         self.add_section(null_section, True)
 
         # its not obvious, but since the null section is first in
-        # the sections list, it a nameoffset of 0 as a result here
+        # the sections list, it gets a nameoffset of 0 as a result here
         shstrtab_contents = ''
 
         for section in self.sections:
@@ -93,7 +98,15 @@ class XtensaElf(object):
         # set shstrndx to index of shstrtab section
         self.elf.fileHeader.shstrndx = len(self.sections) - 1
 
+    def write_to_file(self, filename_to_write):
+        with open(filename_to_write, 'w') as f:
+            f.write(self.elf.pack())
 
+            # BUG workaround: elffile doesn't write program headers!
+            f.seek(self.elf.phoff)
+            for header in self.elf.programHeaders:
+                f.write(header.pack())
+ 
     def add_symtab(self):
         pass
 
