@@ -44,7 +44,7 @@ class XtensaElf(object):
         self.elf.fileHeader.shnum += 1
 
     def generate_elf(self):
-        # layout = elfheader | section contents | sheaders
+        # layout = elfheader | section contents | section headers
         self._generate_null_section_and_string_table()
 
         offset = self.elf.fileHeader.ehsize
@@ -54,7 +54,6 @@ class XtensaElf(object):
             offset += section.section_size
 
         self.elf.shoff = offset
-        offset += self.elf.fileHeader.shentsize  * self.elf.fileHeader.shnum
 
     def _generate_null_section_and_string_table(self):
         null_section = EspElfSection('', 0x0, '')
