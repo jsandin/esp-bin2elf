@@ -31,7 +31,7 @@ def name_sections(rom):
     return addr_to_section_name_mapping
 
 
-def convert_rom_to_elf(esp_rom, name_mapping, filename_to_write):
+def convert_rom_to_elf(esp_rom, addr_to_section_name_mapping, filename_to_write=None):
     elf = XtensaElf(esp_rom.name + '.elf', esp_rom.header.entry_addr)
 
     flash_section = EspElfSection('.irom0.text', 0x40200000, esp_rom.contents)

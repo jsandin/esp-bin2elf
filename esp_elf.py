@@ -175,11 +175,12 @@ codeSettings = SectionSettings(type=SHT_PROGBITS, addralign=1, flags=0x6)
 dataSettings = SectionSettings(type=SHT_PROGBITS, addralign=1, flags=0x3)
 
 default_section_settings = {
-  '':            SectionSettings(type=SHT_NULL,     addralign=1, flags=0x0),
-  '.data':       SectionSettings(type=SHT_PROGBITS, addralign=1, flags=0x3),
-  '.rodata':     SectionSettings(type=SHT_PROGBITS, addralign=1, flags=0x2),
-  '.bss':        SectionSettings(type=SHT_NOBITS,   addralign=1, flags=0x3),
-  '.text':       SectionSettings(type=SHT_PROGBITS, addralign=1, flags=0x6),
-  '.irom0.text': SectionSettings(type=SHT_PROGBITS, addralign=1, flags=0x6),
-  '.shstrtab':   SectionSettings(type=SHT_STRTAB,   addralign=1, flags=0x0)
+  '':              SectionSettings(type=SHT_NULL,     addralign=1, flags=0x0),
+  '.data':         SectionSettings(type=SHT_PROGBITS, addralign=1, flags=0x3),
+  '.rodata':       SectionSettings(type=SHT_PROGBITS, addralign=1, flags=0x2),
+  '.bss':          SectionSettings(type=SHT_NOBITS,   addralign=1, flags=0x3),
+  '.text':         SectionSettings(type=SHT_PROGBITS, addralign=1, flags=0x6),
+  '.irom0.text':   SectionSettings(type=SHT_PROGBITS, addralign=1, flags=0x6),
+  '.bootrom.text': SectionSettings(type=SHT_PROGBITS, addralign=1, flags=0x6),
+  '.shstrtab':     SectionSettings(type=SHT_STRTAB,   addralign=1, flags=0x0)
 }
