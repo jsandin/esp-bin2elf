@@ -143,12 +143,18 @@ class EspElfSection(object):
 
         program_header.type = 1     # LOAD
         program_header.align = 0x1
-        program_header.flags = 6   # fix this
         program_header.filesz = self.header.section_size
         program_header.memsz = self.header.section_size
         program_header.paddr = self.header.addr
         program_header.vaddr = self.header.addr
  	
+        if is_code(self.header.addr):
+            program_header.flags = 6
+        elif is_data(self.header.addr):
+            program_header.flags = 5
+        else:
+            program_header.flags = 0
+
         return program_header
 
 

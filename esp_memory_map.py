@@ -40,7 +40,7 @@ memory_regions = [
     EspMemoryRegion(0x40110000, 0x30000,     'r', 32, "unmapped? (reads 0x00000000)"),
     EspMemoryRegion(0x40140000, 0xC0000,     'r', 32, "unmapped? (reads 0x5931d8ec)"),
     EspMemoryRegion(0x40200000, 0x100000,    'r', 32, "spi flash cache"),
-    EspMemoryRegion(0x40300000, 0x1FD00000,  'r',  8, "unmapped? (reads 0x00800000)"),
+    EspMemoryRegion(0x40300000, 0x1FD00000, 'rx',  8, "unmapped? (reads 0x00800000)"),
     EspMemoryRegion(0x60000000, 0x10000000, 'rw',  8, "Memory-Mapped IO Ports"),
     EspMemoryRegion(0x70000000, 0x90000000,  'r',  8, "unmapped? (reads 0x00000000)")
 ]
