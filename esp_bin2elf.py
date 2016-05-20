@@ -9,8 +9,6 @@ from esp_rom import EspRom
 from esp_elf import XtensaElf, EspElfSection, default_section_settings
 from esp_bootrom import get_bootrom_contents
 
-addr_to_section_name_mapping = {}
-
 def parse_rom(rom_name, rom_filename):
     with open(rom_filename) as f:
         rom = EspRom(rom_name, f)
@@ -19,6 +17,8 @@ def parse_rom(rom_name, rom_filename):
 
 
 def name_sections(rom):
+    addr_to_section_name_mapping = {}
+
     print "select a unique name for each section in the rom."
     print "sensible defaults are available for the following common names:"
     print " ".join(default_section_settings.keys())
@@ -28,8 +28,10 @@ def name_sections(rom):
         name = raw_input("enter a name for 0x%04x> " % (section.address))
         addr_to_section_name_mapping[section.address] = name
 
+    return addr_to_section_name_mapping
 
-def convert_rom_to_elf(esp_rom, filename_to_write):
+
+def convert_rom_to_elf(esp_rom, name_mapping, filename_to_write):
     elf = XtensaElf(esp_rom.name + '.elf', esp_rom.header.entry_addr)
 
     flash_section = EspElfSection('.irom0.text', 0x40200000, esp_rom.contents)
