@@ -4,9 +4,9 @@ Converts a flash dump from an esp8266 device into an ELF executable file for ana
 
 For convenience, esp-bin2elf creates a flash section (**.irom0.text**) containing the complete dump, a section containing the bootrom (**.bootrom.text**), and includes all SDK symbols.
 
-Tested in IDA Pro with the excellent [Xtensa processor plugin]((https://github.com/themadinventor/ida-xtensa) from Fredrik Ahlberg.
+Tested in IDA Pro with the excellent [Xtensa processor plugin](https://github.com/themadinventor/ida-xtensa) from Fredrik Ahlberg.
 
-Once you have your ELF loaded, you can + should leverage the rizzo IDA plugin (https://github.com/devttys0/ida) to identify common functions from the SDK and RTOS examples.  Check my repo for ready-made signatures you can use, or create your own.
+Once you have your ELF loaded, you can + should leverage the [rizzo IDA plugin](https://github.com/devttys0/ida) to identify common functions from the SDK and RTOS examples.  Check my repo for ready-made signatures you can use, or create your own.
 
 ### Requirements:
 
