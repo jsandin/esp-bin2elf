@@ -2,7 +2,7 @@
 
 Converts a flash dump from an esp8266 device into an ELF executable file for analysis and reverse engineering.
 
-For convenience, esp-bin2elf creates a flash section (**.irom0.text**) containing the complete dump, a section containing the bootrom (**.bootrom.text**), and includes all SDK symbols.
+esp-bin2elf will create sections for each of the sections in the ROM.  For convenience, esp-bin2elf also creates a flash section at 0x40200000 (**.irom0.text**) containing the complete dump, a section at 0x40000000 containing the bootrom (**.bootrom.text**), and includes all SDK symbols.
 
 Tested in IDA Pro with the excellent [Xtensa processor plugin](https://github.com/themadinventor/ida-xtensa) from Fredrik Ahlberg.
 
