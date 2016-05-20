@@ -21,18 +21,19 @@ class XtensaElf(object):
         header.entry = entry_addr
         header.flags = 0x300         # 0x300 (IDA complains about this)
         header.machine = 94          # EM_XTENSA
-        header.type = 1              # ET_REL
+        header.type = 2              # ET_EXEC
         header.version = 1           # 1
         header.ehsize = 52           # sizeof(Elf32_Ehdr)
 
         header.shnum = 0             # 0 sections initially
         header.shentsize = 40        # sizeof(Elf32_Shdr)
 
-        header.phnum = 0             # 0 program headers
+        header.phnum = 0             # 0 program headers initially
         header.phentsize = 32        # sizeof(Elf32_Phdr)
    
         self.elf = ElfFile32l(elf_name, ident)
         self.elf.fileHeader = header
+        self.program_headers = {}
 
     def add_section(self, esp_section, add_to_program_header=False):
         if(esp_section.header.name == ''):
@@ -41,19 +42,36 @@ class XtensaElf(object):
         else:
             self.elf.sectionHeaders.append(esp_section.header)
 
+        if add_to_program_header:
+            header = esp_section.generate_program_header()
+            self.program_headers[esp_section.header.name] = header
+
         self.elf.fileHeader.shnum += 1
 
     def generate_elf(self):
-        # layout = elfheader | section contents | section headers
+        # layout = elfheader | section contents | sheaders | pheaders
+        #
+        # _beware_! elffile doesn't pack program headers, and will mess with
+        # offsets when calling pack() if the order isn't exactly as in this
+        # function
         self._generate_null_section_and_string_table()
 
         offset = self.elf.fileHeader.ehsize
 
         for section in self.elf.sectionHeaders:
             section.offset = offset
+
+            if section.name in self.program_headers:
+                program_header = self.program_headers[section.name]
+                program_header.offset = offset
+                self.elf.programHeaders.append(program_header)
+                self.elf.fileHeader.phnum += 1
+
             offset += section.section_size
 
         self.elf.shoff = offset
+        offset += self.elf.fileHeader.shentsize * self.elf.fileHeader.shnum
+        self.elf.phoff = offset
 
     def _generate_null_section_and_string_table(self):
         null_section = EspElfSection('', 0x0, '')
@@ -82,6 +100,11 @@ class XtensaElf(object):
     def write_to_file(self, filename_to_write):
         with open(filename_to_write, 'w') as f:
             f.write(self.elf.pack())
+
+            # BUG workaround: elffile doesn't write program headers!
+            f.seek(self.elf.phoff)
+            for header in self.elf.programHeaders:
+                f.write(header.pack())
 
     def add_symtab(self):
         pass
@@ -114,6 +137,19 @@ class EspElfSection(object):
         header.flags = settings_to_use.flags
 
         self.header = header
+
+    def generate_program_header(self):
+        program_header = ElfProgramHeader32l()
+
+        program_header.type = 1     # LOAD
+        program_header.align = 0x1
+        program_header.flags = 6   # fix this
+        program_header.filesz = self.header.section_size
+        program_header.memsz = self.header.section_size
+        program_header.paddr = self.header.addr
+        program_header.vaddr = self.header.addr
+ 	
+        return program_header
 
 
 class SectionSettings(object):
