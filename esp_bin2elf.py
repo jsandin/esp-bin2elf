@@ -6,8 +6,8 @@
 # http://richard.burtons.org/2015/05/17/esp8266-boot-process/
 
 from esp_rom import EspRom
-from esp_elf import XtensaElf, EspElfSection, default_section_settings
-from esp_bootrom import get_bootrom_contents
+from esp_elf import XtensaElf, ElfSection, default_section_settings
+from esp_bootrom import get_bootrom_contents, symbols
 
 def parse_rom(rom_name, rom_filename):
     with open(rom_filename) as f:
@@ -34,11 +34,11 @@ def name_sections(rom):
 def convert_rom_to_elf(esp_rom, addr_to_section_name_mapping, filename_to_write=None):
     elf = XtensaElf(esp_rom.name + '.elf', esp_rom.header.entry_addr)
 
-    flash_section = EspElfSection('.irom0.text', 0x40200000, esp_rom.contents)
+    flash_section = ElfSection('.irom0.text', 0x40200000, esp_rom.contents)
     elf.add_section(flash_section, True)
 
     bootrom_bytes = get_bootrom_contents()
-    bootrom_section = EspElfSection('.bootrom.text', 0x40000000, bootrom_bytes)
+    bootrom_section = ElfSection('.bootrom.text', 0x40000000, bootrom_bytes)
     elf.add_section(bootrom_section, True)
 
     for section in esp_rom.sections:
@@ -47,10 +47,12 @@ def convert_rom_to_elf(esp_rom, addr_to_section_name_mapping, filename_to_write=
             return None
 
         name = addr_to_section_name_mapping[section.address]
-        elf_section = EspElfSection(name, section.address, section.contents)
+        elf_section = ElfSection(name, section.address, section.contents)
         elf.add_section(elf_section, True)
 
-    #elf.add_symtab()
+    for name, addr in symbols.iteritems():
+        elf.add_symbol(name, addr, '.bootrom.text')
+
     elf.generate_elf()
 
     if filename_to_write:
