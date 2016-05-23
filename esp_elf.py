@@ -39,17 +39,8 @@ class XtensaElf(object):
         self.string_table = ElfStringTable()
         self.symbol_table = ElfSymbolTable()
 
-        # BUG: beware, nameoffset for strtab is computed
-        # incorrectly by elffile and the section name will 
-        # be wrong in readelf output - this is annoying, but
-        # doesn't affect parsing of the ELF during disassembly
-
         self.add_section(NullSection())
-        self.add_section(self.string_table)
         self.add_section(self.symbol_table)
-
-        self.elf.fileHeader.shstrndx = 1
-        self.symbol_table.set_link(1)
 
     def add_section(self, esp_section, add_to_program_header=False):
         nameoffset = self.string_table.add_string(esp_section.header.name)
@@ -65,7 +56,6 @@ class XtensaElf(object):
             self.elf.fileHeader.phnum += 1
 
     def add_symbol(self, symbol_name, symbol_address, section_name):
-        self.string_table.add_string(symbol_name)
         self.symbol_table.add_symbol(symbol_name, symbol_address, section_name)
 
     def get_index_for_section(self, section_name):
@@ -82,9 +72,6 @@ class XtensaElf(object):
         # offsets when calling pack() if the order isn't exactly as in this
         # function
 
-        # add symbols to .symtab
-        self.symbol_table.generate_content(self)
-
         # compute offsets for section contents, sections, and program headers
         offset = self.elf.fileHeader.ehsize
 
@@ -100,6 +87,19 @@ class XtensaElf(object):
         offset += self.elf.fileHeader.shentsize * self.elf.fileHeader.shnum
         self.elf.fileHeader.phoff = offset
 
+        # BUG: beware, nameoffset for strtab is computed
+        # incorrectly by elffile.  workaround is to add 
+        # the string table section last, and pad the table
+        # contents with an extra null byte at the beginning
+        self.add_section(self.string_table)
+        string_table_offset = len(self.elf.sectionHeaders) - 1
+        self.elf.fileHeader.shstrndx = string_table_offset
+        
+        # must generate symbol table _after_ adding
+        # the string table section, as bug workaround.
+        self.symbol_table.set_link(string_table_offset)
+        self.symbol_table.generate_content(self)
+        
     def write_to_file(self, filename_to_write):
         with open(filename_to_write, 'w') as f:
             f.write(self.elf.pack())
@@ -171,11 +171,15 @@ class NullSection(ElfSection):
 
 class ElfStringTable(ElfSection):
     def __init__(self):
-        self.string_to_offset = {'': 0}
+        self.string_to_offset = {}
 
         super(ElfStringTable, self).__init__('.shstrtab', 0x0, '\x00')
 
     def add_string(self, string):
+        # when the null section is added, we'll add a second
+        # null byte to the beginning of the string table contents.
+        # elffile assumes this, and if its not there, the string
+        # table nameoffset becomes corrupted on pack()
         if string not in self.string_to_offset:
             self.string_to_offset[string] = len(self.header.content)
             self.append_to_content(string + '\x00')
@@ -197,16 +201,16 @@ class ElfSymbolTable(ElfSection):
     def set_link(self, link):
         self.header.link = link               # index of .shstrtab
 
+    def add_symbol(self, name, address, section_name):
+        self.symbols.append((name, address, section_name)) 
+
     def generate_content(self, elf):
         for symbol in self.symbols:
             name, address, section_name = symbol
-            offset = elf.string_table.get_index(name)
+            offset = elf.string_table.add_string(name)
             section_index = elf.get_index_for_section(section_name)
             entry = SymbolTableEntry(offset, address, section_index)
             self.append_to_content(entry.pack())
-
-    def add_symbol(self, name, address, section_name):
-        self.symbols.append((name, address, section_name)) 
 
 
 class SymbolTableEntry(object):
