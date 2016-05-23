@@ -32,7 +32,7 @@ Elf32_Ehdr = [
     ('shentsize', '<H'), # Elf32_Half e_shentsize;
     ('shnum',     '<H'), # Elf32_Half e_shnum;
     ('shstrndx',  '<H')  # Elf32_Half e_shstrndx;
-] # } Elf32_Shdr;
+]
 
 Elf32_Shdr = [
     ('nameoffset',   '<I'), # Elf32_Word sh_name;
