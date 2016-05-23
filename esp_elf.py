@@ -154,7 +154,6 @@ class ElfSection(object):
 class NullSection(ElfSection):
     def __init__(self):
         super(NullSection, self).__init__('', 0x0, '')
-        self.header.nameoffset = 0
 
 
 class ElfStringTable(ElfSection):
