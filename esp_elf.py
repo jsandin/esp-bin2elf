@@ -3,8 +3,8 @@
 # MIT licence
 
 from elffile import ElfFileIdent, ElfFileHeader32l, ElfFile32l, ElfSectionHeader32l, ElfProgramHeader32l
+from esp_elf_pack import pack_elf, pack_symbol
 from esp_memory_map import is_code, is_data
-from struct import pack
 
 class XtensaElf(object):
     def __init__(self, elf_name, entry_addr):
@@ -33,20 +33,26 @@ class XtensaElf(object):
         header.phentsize = 32        # sizeof(Elf32_Phdr)
    
         self.elf = ElfFile32l(elf_name, ident)
+        self.elf.ident = ident
         self.elf.fileHeader = header
-        self.sections = {}
 
         self.string_table = ElfStringTable()
         self.symbol_table = ElfSymbolTable()
 
-        self.add_section(NullSection())
+        self.sections = []
+        self.add_section(NullSection(), True) # generate null ph entry
+        self.add_section(self.string_table)
         self.add_section(self.symbol_table)
 
+        string_table_offset = self.get_index_for_section('.shstrtab')
+        self.symbol_table.set_link(string_table_offset)
+        self.elf.fileHeader.shstrndx = string_table_offset
+ 
     def add_section(self, esp_section, add_to_program_header=False):
         nameoffset = self.string_table.add_string(esp_section.header.name)
         esp_section.header.nameoffset = nameoffset
 
-        self.sections[esp_section.header.name] = esp_section
+        self.sections.append(esp_section)
         self.elf.sectionHeaders.append(esp_section.header)
         self.elf.fileHeader.shnum += 1
 
@@ -67,15 +73,14 @@ class XtensaElf(object):
 
     def generate_elf(self):
         # layout = elfheader | section contents | sheaders | pheaders
-        #
-        # _beware_! elffile doesn't pack program headers, and will mess with
-        # offsets when calling pack() if the order isn't exactly as in this
-        # function
+       
+        # generate symbol table
+        self.symbol_table.generate_content(self)
 
         # compute offsets for section contents, sections, and program headers
         offset = self.elf.fileHeader.ehsize
 
-        for section in self.sections.values():
+        for section in self.sections:
             section.header.offset = offset
 
             if section.program_header:
@@ -83,31 +88,14 @@ class XtensaElf(object):
 
             offset += section.header.section_size
 
+        # write section and program headers after contents
         self.elf.fileHeader.shoff = offset
         offset += self.elf.fileHeader.shentsize * self.elf.fileHeader.shnum
         self.elf.fileHeader.phoff = offset
-
-        # BUG: beware, nameoffset for strtab is computed
-        # incorrectly by elffile.  workaround is to add 
-        # the string table section last, and pad the table
-        # contents with an extra null byte at the beginning
-        self.add_section(self.string_table)
-        string_table_offset = len(self.elf.sectionHeaders) - 1
-        self.elf.fileHeader.shstrndx = string_table_offset
-        
-        # must generate symbol table _after_ adding
-        # the string table section, as bug workaround.
-        self.symbol_table.set_link(string_table_offset)
-        self.symbol_table.generate_content(self)
-        
+       
     def write_to_file(self, filename_to_write):
         with open(filename_to_write, 'w') as f:
-            f.write(self.elf.pack())
-
-            # BUG workaround: elffile doesn't pack program headers!
-            f.seek(self.elf.fileHeader.phoff)
-            for header in self.elf.programHeaders:
-                f.write(header.pack())
+            f.write(pack_elf(self.elf))
 
 
 class ElfSection(object):
@@ -154,9 +142,9 @@ class ElfSection(object):
         program_header.vaddr = self.header.addr
  	
         if is_code(self.header.addr):
-            program_header.flags = 6    # R E
+            program_header.flags = 5    # R E
         elif is_data(self.header.addr):
-            program_header.flags = 5    # RW
+            program_header.flags = 6    # RW
         else:
             program_header.flags = 0
 
@@ -171,15 +159,11 @@ class NullSection(ElfSection):
 
 class ElfStringTable(ElfSection):
     def __init__(self):
-        self.string_to_offset = {}
+        self.string_to_offset = {'': 0}
 
         super(ElfStringTable, self).__init__('.shstrtab', 0x0, '\x00')
 
     def add_string(self, string):
-        # when the null section is added, we'll add a second
-        # null byte to the beginning of the string table contents.
-        # elffile assumes this, and if its not there, the string
-        # table nameoffset becomes corrupted on pack()
         if string not in self.string_to_offset:
             self.string_to_offset[string] = len(self.header.content)
             self.append_to_content(string + '\x00')
@@ -223,16 +207,7 @@ class SymbolTableEntry(object):
         self.st_shndx = section_index
 
     def pack(self):
-        entry_bytes = ''
-
-        entry_bytes += pack('<I', self.st_name)
-        entry_bytes += pack('<I', self.st_value)
-        entry_bytes += pack('<I', self.st_size)
-        entry_bytes += pack('<B', self.st_info)
-        entry_bytes += pack('<B', self.st_other)
-        entry_bytes += pack('<H', self.st_shndx)
-
-        return entry_bytes
+        return pack_symbol(self)
 
 
 class SectionSettings(object):
@@ -240,7 +215,6 @@ class SectionSettings(object):
         self.type = type
         self.addralign = addralign
         self.flags = flags
-
 
 # section_types:
 SHT_NULL     = 0
