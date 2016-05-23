@@ -34,31 +34,46 @@ class XtensaElf(object):
    
         self.elf = ElfFile32l(elf_name, ident)
         self.elf.fileHeader = header
+        self.sections = {}
 
-        self.program_headers = {}
-        self.symbols = {}
+        self.string_table = ElfStringTable()
+        self.symbol_table = ElfSymbolTable()
+
+        # BUG: beware, nameoffset for strtab is computed
+        # incorrectly by elffile and the section name will 
+        # be wrong in readelf output - this is annoying, but
+        # doesn't affect parsing of the ELF during disassembly
+
+        self.add_section(NullSection())
+        self.add_section(self.string_table)
+        self.add_section(self.symbol_table)
+
+        self.elf.fileHeader.shstrndx = 1
+        self.symbol_table.set_link(1)
 
     def add_section(self, esp_section, add_to_program_header=False):
-        if(esp_section.header.name == ''):
-            # null section must go in front of section list
-            self.elf.sectionHeaders.insert(0, esp_section.header)
-        else:
-            self.elf.sectionHeaders.append(esp_section.header)
+        nameoffset = self.string_table.add_string(esp_section.header.name)
+        esp_section.header.nameoffset = nameoffset
 
-        if add_to_program_header:
-            header = esp_section.generate_program_header()
-            self.program_headers[esp_section.header.name] = header
-
+        self.sections[esp_section.header.name] = esp_section
+        self.elf.sectionHeaders.append(esp_section.header)
         self.elf.fileHeader.shnum += 1
 
-    def get_section_index_by_name(self, section_name):
-        for index, header in enumerate(self.elf.sectionHeaders):
-            if header.name == section_name:
-                return index
-        return None
+        if add_to_program_header:
+            esp_section.generate_program_header()
+            self.elf.programHeaders.append(esp_section.program_header)
+            self.elf.fileHeader.phnum += 1
 
     def add_symbol(self, symbol_name, symbol_address, section_name):
-        self.symbols[symbol_name] = (symbol_address, section_name)
+        self.string_table.add_string(symbol_name)
+        self.symbol_table.add_symbol(symbol_name, symbol_address, section_name)
+
+    def get_index_for_section(self, section_name):
+        for index, section in enumerate(self.elf.sectionHeaders):
+            if section.name == section_name:
+                return index
+
+        raise Exception("Symbol added for unknown section %s" % section_name)
 
     def generate_elf(self):
         # layout = elfheader | section contents | sheaders | pheaders
@@ -66,81 +81,31 @@ class XtensaElf(object):
         # _beware_! elffile doesn't pack program headers, and will mess with
         # offsets when calling pack() if the order isn't exactly as in this
         # function
-        self._generate_null_section_symtab_and_string_table()
 
+        # add symbols to .symtab
+        self.symbol_table.generate_content(self)
+
+        # compute offsets for section contents, sections, and program headers
         offset = self.elf.fileHeader.ehsize
 
-        for section in self.elf.sectionHeaders:
-            section.offset = offset
+        for section in self.sections.values():
+            section.header.offset = offset
 
-            if section.name in self.program_headers:
-                program_header = self.program_headers[section.name]
-                program_header.offset = offset
-                self.elf.programHeaders.append(program_header)
-                self.elf.fileHeader.phnum += 1
+            if section.program_header:
+                section.program_header.offset = offset
 
-            offset += section.section_size
+            offset += section.header.section_size
 
-        self.elf.shoff = offset
+        self.elf.fileHeader.shoff = offset
         offset += self.elf.fileHeader.shentsize * self.elf.fileHeader.shnum
-        self.elf.phoff = offset
-
-    def _generate_null_section_symtab_and_string_table(self):
-        # add null section
-        null_section = ElfSection('', 0x0, '')
-        self.add_section(null_section, True)
-
-        # its not obvious, but since the null section is first in
-        # the sections list, it gets a nameoffset of 0 as a result here
-        shstrtab_contents = ''
-
-        for section in self.elf.sectionHeaders:
-            section.nameoffset = len(shstrtab_contents)
-            shstrtab_contents += (section.name + '\00')
-
-        # add symbols to .shstrtab
-        symbol_names_to_offsets = {}
-        for symbol_name in self.symbols.keys():
-            symbol_names_to_offsets[symbol_name] = len(shstrtab_contents)
-            shstrtab_contents += (symbol_name + '\00')
-
-        # add .symtab to name string table
-        nameoffset = len(shstrtab_contents)
-        shstrtab_contents += ('.symtab' + '\00')
-
-        # need to add the .shstrtab name as well
-        nameoffset = len(shstrtab_contents)
-        shstrtab_contents += ('.shstrtab' + '\00')
-
-        # now we can add the .shstrtab section
-        string_table = ElfSection('.shstrtab', 0x0, shstrtab_contents)
-        string_table.header.nameoffset = nameoffset
-        self.add_section(string_table)
-
-        # set shstrndx to index of .shstrtab section
-        self.elf.fileHeader.shstrndx = len(self.elf.sectionHeaders) - 1
-
-        # add .symtab section
-        symbols = []
-        for symbol_name in self.symbols.keys():
-            (address, section_name) = self.symbols[symbol_name]
-            offset = symbol_names_to_offsets[symbol_name]
-            index = self.get_section_index_by_name(section_name)
-            if not index:
-                raise Exception("can't find index for %s" % (section_name))
-            symbols.append(Symbol(symbol_name, address, offset, index))
-
-        symbol_table = ElfSymbolTable('.symtab', 0x0, symbols,
-                                         self.elf.fileHeader.shstrndx)
-        symbol_table.header.nameoffset = nameoffset
-        self.add_section(symbol_table)
+        self.elf.fileHeader.phoff = offset
 
     def write_to_file(self, filename_to_write):
         with open(filename_to_write, 'w') as f:
             f.write(self.elf.pack())
 
             # BUG workaround: elffile doesn't pack program headers!
-            f.seek(self.elf.phoff)
+            f.seek(self.elf.fileHeader.phoff)
             for header in self.elf.programHeaders:
                 f.write(header.pack())
 
@@ -172,6 +137,11 @@ class ElfSection(object):
         header.flags = settings_to_use.flags
 
         self.header = header
+        self.program_header = None
+
+    def append_to_content(self, string):
+        self.header.content += string
+        self.header.section_size = len(self.header.content)
 
     def generate_program_header(self):
         program_header = ElfProgramHeader32l()
@@ -190,36 +160,55 @@ class ElfSection(object):
         else:
             program_header.flags = 0
 
-        return program_header
+        self.program_header = program_header
 
 
-class Symbol(object):
-    def __init__(self, name, address, offset, section_index):
-        self.name = name
-        self.address = address
-        self.offset = offset
-        self.section_index = section_index
+class NullSection(ElfSection):
+    def __init__(self):
+        super(NullSection, self).__init__('', 0x0, '')
+        self.header.nameoffset = 0
+
+
+class ElfStringTable(ElfSection):
+    def __init__(self):
+        self.string_to_offset = {'': 0}
+
+        super(ElfStringTable, self).__init__('.shstrtab', 0x0, '\x00')
+
+    def add_string(self, string):
+        if string not in self.string_to_offset:
+            self.string_to_offset[string] = len(self.header.content)
+            self.append_to_content(string + '\x00')
+
+        return self.get_index(string)
+
+    def get_index(self, string):
+        return self.string_to_offset[string]
 
 
 class ElfSymbolTable(ElfSection):
-    def __init__(self, section_name, section_address, symbol_list, link):
+    def __init__(self):
+        super(ElfSymbolTable, self).__init__('.symtab', 0x0, '')
 
-        section_bytes = '\x00' * 16   # first entry is null symbol
-        for symbol in symbol_list:
-            offset = symbol.offset
-            address = symbol.address
-            section_index = symbol.section_index
+        self.append_to_content('\x00' * 16)   # first entry is null symbol
+        self.header.entsize = 16              # sizeof(Elf32_sym)
+        self.symbols = []
+
+    def set_link(self, link):
+        self.header.link = link               # index of .shstrtab
+
+    def generate_content(self, elf):
+        for symbol in self.symbols:
+            name, address, section_name = symbol
+            offset = elf.string_table.get_index(name)
+            section_index = elf.get_index_for_section(section_name)
             entry = SymbolTableEntry(offset, address, section_index)
-            section_bytes += entry.pack()
+            self.append_to_content(entry.pack())
 
-        super(ElfSymbolTable, self).__init__(section_name,
-                                             section_address,
-                                             section_bytes)
+    def add_symbol(self, name, address, section_name):
+        self.symbols.append((name, address, section_name)) 
 
-        self.header.link = link       # index of .shstrtab
-        self.header.entsize = 16      # sizeof(Elf32_sym)
 
- 
 class SymbolTableEntry(object):
     def __init__(self, symbol_name_offset, symbol_address, section_index):
         self.st_name = symbol_name_offset
