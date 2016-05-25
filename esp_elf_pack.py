@@ -9,16 +9,16 @@
 #
 #   1) Doesn't pack program headers, and instead ignores them silently
 #   2) Changes header offsets after they've been set
-#   3) Computes the strtab nameoffset incorrectly 
-# 
+#   3) Computes the strtab nameoffset incorrectly
+#
 # esp_elf.py originally contained confusing workarounds for these
 # issues, but these workarounds have been removed and a simpler pack
 # function with fewer surprises is instead implemented here.
 
 from struct import pack
 
-Elf32_Ehdr = [  
-                         # unsigned char e_ident[EI_NIDENT] 
+Elf32_Ehdr = [
+                         # unsigned char e_ident[EI_NIDENT]
     ('type',      '<H'), # Elf32_Half e_type;
     ('machine',   '<H'), # Elf32_Half e_machine;
     ('version',   '<I'), # Elf32_Word e_version;
@@ -94,7 +94,7 @@ def pack_elf(xtensa_elf):
 
 def pack_fileheader(file_header):
     return _pack_struct(file_header, Elf32_Ehdr)
-   
+
 def pack_section_header(section_header):
     return _pack_struct(section_header, Elf32_Shdr)
 
@@ -104,7 +104,7 @@ def pack_program_header(program_header):
 def pack_symbol(symbol):
     return _pack_struct(symbol, Elf32_Sym)
 
-def pack_ident(ident):   
+def pack_ident(ident):
     header = '\x7fELF'                     # magic number
     header += _pack_struct(ident, e_ident) # pack fields in e_ident
     return header + '\x00' * 9             # pad to 16 bytes

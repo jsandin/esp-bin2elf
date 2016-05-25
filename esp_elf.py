@@ -9,16 +9,16 @@ from esp_memory_map import is_code, is_data
 class XtensaElf(object):
     def __init__(self, elf_name, entry_addr):
         ident = ElfFileIdent()
-    
+
         ident.abiversion = 0         # 0
         ident.elfClass =  1          # ELFCLASS32
         ident.elfData = 1            # ELFDATA2LSB
         ident.fileVersion = 1        # 1
         ident.magic = '\x7fELF'      # ELF'
         ident.osabi = 0              # 0
-    
+
         header = ElfFileHeader32l()
-    
+
         header.entry = entry_addr
         header.flags = 0x300         # 0x300 (IDA complains about this)
         header.machine = 94          # EM_XTENSA
@@ -31,7 +31,7 @@ class XtensaElf(object):
 
         header.phnum = 0             # 0 program headers initially
         header.phentsize = 32        # sizeof(Elf32_Phdr)
-   
+
         self.elf = ElfFile32l(elf_name, ident)
         self.elf.ident = ident
         self.elf.fileHeader = header
@@ -47,7 +47,7 @@ class XtensaElf(object):
         string_table_offset = self.get_index_for_section('.shstrtab')
         self.symbol_table.set_link(string_table_offset)
         self.elf.fileHeader.shstrndx = string_table_offset
- 
+
     def add_section(self, esp_section, add_to_program_header=False):
         nameoffset = self.string_table.add_string(esp_section.header.name)
         esp_section.header.nameoffset = nameoffset
@@ -73,7 +73,7 @@ class XtensaElf(object):
 
     def generate_elf(self):
         # layout = elfheader | section contents | sheaders | pheaders
-       
+
         # generate symbol table
         self.symbol_table.generate_content(self)
 
@@ -92,7 +92,7 @@ class XtensaElf(object):
         self.elf.fileHeader.shoff = offset
         offset += self.elf.fileHeader.shentsize * self.elf.fileHeader.shnum
         self.elf.fileHeader.phoff = offset
-       
+
     def write_to_file(self, filename_to_write):
         with open(filename_to_write, 'w') as f:
             f.write(pack_elf(self.elf))
@@ -101,13 +101,13 @@ class XtensaElf(object):
 class ElfSection(object):
     def __init__(self, section_name, section_address, section_bytes):
         header = ElfSectionHeader32l()
-    
+
         header.name = section_name
         header.addr = section_address
         header.link = 0
         header.info = 0
         header.entsize = 0
-    
+
         header.content = section_bytes
         header.section_size = len(section_bytes)
 
@@ -140,7 +140,7 @@ class ElfSection(object):
         program_header.memsz = self.header.section_size
         program_header.paddr = self.header.addr
         program_header.vaddr = self.header.addr
- 	
+
         if is_code(self.header.addr):
             program_header.flags = 5    # R E
         elif is_data(self.header.addr):
@@ -185,7 +185,7 @@ class ElfSymbolTable(ElfSection):
         self.header.link = link               # index of .shstrtab
 
     def add_symbol(self, name, address, section_name):
-        self.symbols.append((name, address, section_name)) 
+        self.symbols.append((name, address, section_name))
 
     def generate_content(self, elf):
         for symbol in self.symbols:

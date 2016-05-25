@@ -23,10 +23,10 @@ class EspRom(object):
         rep += "header: %s, " % (self.header)
         rep += "len(sections): %s, " % (len(self.sections))
         rep += "len(contents): %s)" % (len(self.contents))
-   
+
         return rep
 
- 
+
 class EspRomHeader(object):
     ROM_HEADER_SIZE = 8
 
@@ -43,7 +43,7 @@ class EspRomHeader(object):
             raise RomParseException(
                 "EspRomRomHeader.init(): len(rom_header_bytes) is %d bytes != 8 bytes."
                     % (len(rom_header_bytes)))
-    
+
         if rom_header_bytes[0] != '\xe9':
             raise RomParseException(
                 "EspRomRomHeader.init(): magic_number is %s != 0xe9."
@@ -54,7 +54,7 @@ class EspRomHeader(object):
         self.flags1 = unpack('<B', rom_header_bytes[2])[0]
         self.flags2 = unpack('<B', rom_header_bytes[3])[0]
         self.entry_addr = unpack('<I', rom_header_bytes[4:8])[0]
-    
+
     def __str__(self):
         rep = "EspRomHeader("
         rep += "magic: 0x%02x, " % (self.magic)
@@ -62,9 +62,9 @@ class EspRomHeader(object):
         rep += "flags1: 0x%02x, " % (self.flags1)
         rep += "flags2: 0x%02x, " % (self.flags2)
         rep += "entry_addr: 0x%04x)" % (self.entry_addr)
-    
+
         return rep
-    
+
 
 class EspRomSection(object):
     SECTION_HEADER_SIZE = 8
@@ -76,12 +76,12 @@ class EspRomSection(object):
         # } sect_header;
 
         section_header_bytes = rom_bytes_stream.read(EspRomSection.SECTION_HEADER_SIZE)
-    
+
         if len(section_header_bytes) != EspRomSection.SECTION_HEADER_SIZE:
             raise RomParseException(
                 "EspRomSection.init(): section_header_bytes is %d bytes != 8 bytes."
                     % (len(section_header_bytes)))
-    
+
         self.address = unpack('<I', section_header_bytes[0:4])[0]
         self.length = unpack('<I', section_header_bytes[4:8])[0]
         self.contents = rom_bytes_stream.read(self.length)
@@ -90,12 +90,12 @@ class EspRomSection(object):
             raise RomParseException(
                 "EspRomSection.init(): self.contents is %d bytes != self.length %d."
                     % (len(self.contents), self.length))
-    
+
     def __str__(self):
         rep = "EspRomSection("
         rep += "address: 0x%04x, " % (self.address)
         rep += "length: %d)" % (self.length)
-   
+
         return rep
 
 
@@ -113,7 +113,7 @@ def pretty_print_rom(esp_rom):
     print "\tflags1: 0x%02x" % (esp_rom.header.flags1)
     print "\tflags2: 0x%02x" % (esp_rom.header.flags2)
     print "\tentry_addr: 0x%04x\n" % (esp_rom.header.entry_addr)
- 
+
     print "sections:"
     for section in esp_rom.sections:
         pretty_print_esp_section(section)
@@ -124,7 +124,7 @@ def pretty_print_esp_section(section):
 
     if low_region:
         desc = low_region.description
-        low_addr, high_addr = low_region.base_address, high_region.base_address 
+        low_addr, high_addr = low_region.base_address, high_region.base_address
         mem_desc = "%s (0x%04x - 0x%04x)" % (desc, low_addr, high_addr)
         print "\taddress: 0x%04x, part of %s" % (section.address, mem_desc)
     else:
