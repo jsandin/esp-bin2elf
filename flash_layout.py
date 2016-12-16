@@ -24,7 +24,8 @@ class FlashDataSection(object):
 
         return rep
 
-# commented sections below aren't included by existing linker scripts
+# commented sections below aren't included by existing linker scripts,
+# and may not appear in the memory map - read from flash directly?
 layout_without_ota_updates = {
     '.text': FlashDataSection(0x00000, 248, '.text', 'User Application'),
     '.irom0.text': FlashDataSection(0x40000, 240, '.irom0.text', 'SDK libraries')
