@@ -16,9 +16,12 @@ Install the 'elffile' python module before using this.
 
 ```python
 import esp_bin2elf
+import flash_layout
+
+flash_layout = flash_layout.layout_without_ota_updates
 rom = esp_bin2elf.parse_rom('flashdump.bin', 'path/to/flashdump.bin')
 section_names = esp_bin2elf.name_sections(rom)
-elf = esp_bin2elf.convert_rom_to_elf(rom, section_names, 'flash_bin.elf')
+elf = esp_bin2elf.convert_rom_to_elf(rom, flash_layout, section_names, 'flash_bin.elf')
 ```
 
 Then run `readelf -a flash_bin.elf` and make sure things look ok.
