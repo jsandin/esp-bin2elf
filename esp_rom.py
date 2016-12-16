@@ -44,6 +44,12 @@ class EspRomHeader(object):
                 "EspRomRomHeader.init(): len(rom_header_bytes) is %d bytes != 8 bytes."
                     % (len(rom_header_bytes)))
 
+        # the new ROM header format includes .irom0.text in the beginning of flash -
+        # this tool doesn't handle these.
+        if rom_header_bytes[0] == '\xea':
+            raise RomParseException(
+                "EspRomRomHeader.init(): new ROM header format detected - unsupported.")
+
         if rom_header_bytes[0] != '\xe9':
             raise RomParseException(
                 "EspRomRomHeader.init(): magic_number is %s != 0xe9."
