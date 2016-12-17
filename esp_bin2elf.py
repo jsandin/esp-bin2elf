@@ -9,9 +9,9 @@ from esp_rom import EspRom
 from esp_elf import XtensaElf, ElfSection, default_section_settings
 from esp_bootrom import get_bootrom_contents, symbols
 
-def parse_rom(rom_name, rom_filename):
+def parse_rom(rom_name, rom_filename, flash_layout):
     with open(rom_filename) as f:
-        rom = EspRom(rom_name, f)
+        rom = EspRom(rom_name, f, flash_layout)
 
     return rom
 
@@ -31,14 +31,8 @@ def name_sections(rom):
     return addr_to_section_name_mapping
 
 
-def convert_rom_to_elf(esp_rom, flash_layout, addr_to_section_name_mapping, filename_to_write=None):
+def convert_rom_to_elf(esp_rom, addr_to_section_name_mapping, filename_to_write=None):
     elf = XtensaElf(esp_rom.name + '.elf', esp_rom.header.entry_addr)
-
-    flash_section = flash_layout['.irom0.text']
-    limit = flash_section.offset + flash_section.size * 1024
-    irom_text_contents = esp_rom.contents[flash_section.offset: limit]
-    flash_section = ElfSection('.irom0.text', 0x40200000, irom_text_contents)
-    elf.add_section(flash_section, True)
 
     bootrom_bytes = get_bootrom_contents()
     bootrom_section = ElfSection('.bootrom.text', 0x40000000, bootrom_bytes)
@@ -60,5 +54,5 @@ def convert_rom_to_elf(esp_rom, flash_layout, addr_to_section_name_mapping, file
 
     if filename_to_write:
         elf.write_to_file(filename_to_write)
- 
+
     return elf

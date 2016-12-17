@@ -3,10 +3,11 @@
 # MIT licence
 
 from esp_memory_map import find_region_for_address
-from struct import unpack
+from struct import pack, unpack
+from StringIO import StringIO
 
 class EspRom(object):
-    def __init__(self, rom_name, rom_bytes_stream):
+    def __init__(self, rom_name, rom_bytes_stream, flash_layout):
         self.name = rom_name
         self.contents = rom_bytes_stream.read()
         rom_bytes_stream.seek(0)
@@ -17,6 +18,19 @@ class EspRom(object):
         for i in range(0, self.header.sect_count):
             section = EspRomSection(rom_bytes_stream)
             self.sections.append(section)
+
+        # read the irom0.text section from flash, non-OTA case.
+        irom_section = flash_layout['.irom0.text']
+        rom_bytes_stream.seek(irom_section.offset)
+        irom_text_contents = rom_bytes_stream.read(irom_section.size * 1024)
+
+        # The irom0.text section doesn't have a header - we prepend one
+        synthetic_header = pack('<I', 0x40200000)
+        synthetic_header += pack('<I', len(irom_text_contents))
+
+        # create .irom0.text section with our fake header and add it
+        section = EspRomSection(StringIO(synthetic_header + irom_text_contents))
+        self.sections.append(section)
 
     def __str__(self):
         rep = "EspRom("
