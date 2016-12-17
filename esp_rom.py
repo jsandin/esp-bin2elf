@@ -3,8 +3,9 @@
 # MIT licence
 
 from esp_memory_map import find_region_for_address
-from struct import pack, unpack
+
 from StringIO import StringIO
+from struct import pack, unpack
 
 class EspRom(object):
     def __init__(self, rom_name, rom_bytes_stream, flash_layout):
@@ -21,15 +22,14 @@ class EspRom(object):
 
         # read the irom0.text section from flash, non-OTA case.
         irom_section = flash_layout['.irom0.text']
+        irom_address = 0x40200000
+        irom_size = irom_section_size * 1024
+
         rom_bytes_stream.seek(irom_section.offset)
-        irom_text_contents = rom_bytes_stream.read(irom_section.size * 1024)
+        irom_text_contents = rom_bytes_stream.read(irom_size)
 
-        # The irom0.text section doesn't have a header - we prepend one
-        synthetic_header = pack('<I', 0x40200000)
-        synthetic_header += pack('<I', len(irom_text_contents))
-
-        # create .irom0.text section with our fake header and add it
-        section = EspRomSection(StringIO(synthetic_header + irom_text_contents))
+        # add .irom0.text section
+        section = EspRomSection(StringIO(irom_text_contents), irom_address, irom_size)
         self.sections.append(section)
 
     def __str__(self):
@@ -151,21 +151,28 @@ class EspRomE4Header(EspRomHeader):
 class EspRomSection(object):
     SECTION_HEADER_SIZE = 8
 
-    def __init__(self, rom_bytes_stream):
+    def __init__(self, rom_bytes_stream, address=None, length=None):
         # typedef struct {
         #     uint32 address;
         #     uint32 length;
         # } sect_header;
 
-        section_header_bytes = rom_bytes_stream.read(EspRomSection.SECTION_HEADER_SIZE)
+        if not address or not length:
+            section_header_bytes = rom_bytes_stream.read(EspRomSection.SECTION_HEADER_SIZE)
 
-        if len(section_header_bytes) != EspRomSection.SECTION_HEADER_SIZE:
-            raise RomParseException(
-                "EspRomSection.init(): section_header_bytes is %d bytes != 8 bytes."
-                    % (len(section_header_bytes)))
+            if len(section_header_bytes) != EspRomSection.SECTION_HEADER_SIZE:
+                raise RomParseException(
+                    "EspRomSection.init(): section_header_bytes is %d bytes != 8 bytes."
+                        % (len(section_header_bytes)))
 
-        self.address = unpack('<I', section_header_bytes[0:4])[0]
-        self.length = unpack('<I', section_header_bytes[4:8])[0]
+            self.address = unpack('<I', section_header_bytes[0:4])[0]
+            self.length = unpack('<I', section_header_bytes[4:8])[0]
+
+        else:
+            # support specified length and address for non-OTA case and new header
+            self.address = address
+            self.length = address
+
         self.contents = rom_bytes_stream.read(self.length)
 
         if len(self.contents) != self.length:
