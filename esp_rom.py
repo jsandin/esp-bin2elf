@@ -10,27 +10,33 @@ from struct import pack, unpack
 class EspRom(object):
     def __init__(self, rom_name, rom_bytes_stream, flash_layout):
         self.name = rom_name
+        self.sections = []
         self.contents = rom_bytes_stream.read()
         rom_bytes_stream.seek(0)
-        HeaderClass = EspRomHeader.get_header_type(self.contents[0])
-        self.header = HeaderClass(rom_bytes_stream.read(HeaderClass.ROM_HEADER_SIZE))
 
-        self.sections = []
-        for i in range(0, self.header.sect_count):
-            section = EspRomSection(rom_bytes_stream)
-            self.sections.append(section)
-
-        # read the irom0.text section from flash, non-OTA case.
-        irom_section = flash_layout['.irom0.text']
-        irom_address = 0x40200000
-        irom_size = irom_section_size * 1024
-
-        rom_bytes_stream.seek(irom_section.offset)
-        irom_text_contents = rom_bytes_stream.read(irom_size)
+        self.header = EspRomHeader.get_header(rom_bytes_stream)
+        if self.header.is_new():
+            # the new header format includes .irom0.text directly after,
+            # followed by an e9 header
+            irom_address = 0x40200000
+            irom_size = self.header.length
+            irom_text_contents = rom_bytes_stream.read(irom_size)
+            self.header = EspRomE9Header(rom_bytes_stream)
+        else:
+            # read the irom0.text section from flash, non-OTA case.
+            irom_section = flash_layout['.irom0.text']
+            irom_address = 0x40200000
+            irom_size = irom_section.size * 1024
+            limit = irom_section.offset + irom_size
+            irom_text_contents = self.contents[irom_section.offset:limit]
 
         # add .irom0.text section
         section = EspRomSection(StringIO(irom_text_contents), irom_address, irom_size)
         self.sections.append(section)
+
+        for i in range(0, self.header.sect_count):
+            section = EspRomSection(rom_bytes_stream)
+            self.sections.append(section)
 
     def __str__(self):
         rep = "EspRom("
@@ -44,15 +50,18 @@ class EspRom(object):
 
 class EspRomHeader(object):
     @staticmethod
-    def get_header_type(header_byte):
-        if header_byte == '\xe9':
-            return EspRomE9Header
-        elif header_byte == '\xe4':
-            return EspRomE4Header
+    def get_header(rom_bytes_stream):
+        header_type = rom_bytes_stream.read(1)
+        rom_bytes_stream.seek(-1, 1) # relative position
+
+        if header_type == '\xe9':
+            return EspRomE9Header(rom_bytes_stream)
+        elif header_type == '\xe4':
+            return EspRomE4Header(rom_bytes_stream)
         else:
             raise RomParseException(
-                "EspRomHeader.get_header_type: unrecognized magic_number %s"
-                    % (header_byte))
+                "EspRomHeader.get_header: unrecognized magic_number %s"
+                    % (header_type))
 
     def __init__(self):
         pass
@@ -61,7 +70,7 @@ class EspRomHeader(object):
 class EspRomE9Header(EspRomHeader):
     ROM_HEADER_SIZE = 8
 
-    def __init__(self, rom_header_bytes):
+    def __init__(self, rom_bytes_stream):
         # typedef struct {
         #     uint8 magic;
         #     uint8 sect_count;
@@ -69,6 +78,8 @@ class EspRomE9Header(EspRomHeader):
         #     uint8 flags2;
         #     uint32 entry_addr;
         # } rom_header;
+
+        rom_header_bytes = rom_bytes_stream.read(EspRomE9Header.ROM_HEADER_SIZE)
 
         if len(rom_header_bytes) != EspRomE9Header.ROM_HEADER_SIZE:
             raise RomParseException(
@@ -88,6 +99,9 @@ class EspRomE9Header(EspRomHeader):
 
         super(EspRomE9Header, self).__init__()
 
+    def is_new(self):
+        return False
+
     def __str__(self):
         rep = "EspRomE9Header("
         rep += "magic: 0x%02x, " % (self.magic)
@@ -102,7 +116,7 @@ class EspRomE9Header(EspRomHeader):
 class EspRomE4Header(EspRomHeader):
     ROM_HEADER_SIZE = 16
 
-    def __init__(self, rom_header_bytes):
+    def __init__(self, rom_bytes_stream):
         # typedef struct {
         #     uint8 magic1;
         #     uint8 magic2;
@@ -111,6 +125,8 @@ class EspRomE4Header(EspRomHeader):
         #     uint8 unused[4];
         #     uint32 length;
         # } rom_header;
+
+        rom_header_bytes = rom_bytes_stream.read(EspRomE4Header.ROM_HEADER_SIZE)
 
         if len(rom_header_bytes) != EspRomE4Header.ROM_HEADER_SIZE:
             raise RomParseException(
@@ -135,6 +151,9 @@ class EspRomE4Header(EspRomHeader):
         self.length = unpack('<I', rom_header_bytes[12:16])[0]
 
         super(EspRomE4Header, self).__init__()
+
+    def is_new(self):
+        return True
 
     def __str__(self):
         rep = "EspRomE4Header("
@@ -171,7 +190,7 @@ class EspRomSection(object):
         else:
             # support specified length and address for non-OTA case and new header
             self.address = address
-            self.length = address
+            self.length = length
 
         self.contents = rom_bytes_stream.read(self.length)
 
@@ -188,5 +207,5 @@ class EspRomSection(object):
         return rep
 
 
-class RomParseException(object):
+class RomParseException(Exception):
     pass
